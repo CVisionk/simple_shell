@@ -110,7 +110,7 @@ int main(int ac, char **av)
 		char *line = NULL;
 		char **args;
 
-		printf("#cisfun$ ");
+		printf("$ ");
 		while ((read = getline(&line, &len, stdin)) != -1)
 		{
 			if (read == -1 && len == 0)
@@ -131,7 +131,7 @@ int main(int ac, char **av)
 				fprintf(stderr, "./shell: No such file or directory\n");
 			}
 
-			printf("#cisfun$ ");
+			printf("$ ");
 			free_args(args);
 		}
 		free(line);
