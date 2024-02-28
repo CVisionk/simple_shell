@@ -1,5 +1,6 @@
 #include "main.h"
 
+
 /**
  * tokenize_input - Tokenizes the input command and arguments.
  * @buffer: The input buffer containing the command and arguments.
@@ -151,9 +152,10 @@ int main(void)
 
     while (1)
     {			
-							/*int marker = -1;*/
+								int marker = -1;
 								if(isatty(STDIN_FILENO)){
-        printf("$ ");
+        	printf("$ ");
+									marker = 1;
 								}
         fflush(stdout);
 
@@ -162,7 +164,11 @@ int main(void)
         {
             if (feof(stdin))
             {
-                printf("\n");
+                if(marker>-1)
+																{
+																	printf("\n");
+																}
+																
                 break;
             }
             else
