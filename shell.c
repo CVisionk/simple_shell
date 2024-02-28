@@ -4,7 +4,7 @@
 #define MAX_ARGS 64
 
 /**
- * char **splitter - split input into array of strings.
+ * splitter - split input into array of strings.
  * @input: input to split
  *
  * Return: array of strings
@@ -34,7 +34,7 @@ char **splitter(char *input)
 
 
 /**
- * void free args - free memory
+ * free_args - free memory
  * @args: memory to free
  *
  * Returns: void
@@ -42,7 +42,8 @@ char **splitter(char *input)
 void free_args(char **args)
 {
 	int i;
-	for ( i = 0; args[i] != NULL; i++)
+
+	for (i = 0; args[i] != NULL; i++)
 	{
 		free(args[i]);
 	}
@@ -51,7 +52,7 @@ void free_args(char **args)
 
 
 /**
- * void execute_command - execute args
+ * execute_command - execute args
  * @args: arguments to execute
  *
  * Returns: void
@@ -84,10 +85,12 @@ void execute_command(char **args)
 
 
 /**
- * void main - no description
+ * main - no description
  *
- *
- * Returns: int
+	* @ac: number of arguments
+ * @av: arguments
+	*
+ * Return: int
  */
 int main(int ac, char **av)
 {
