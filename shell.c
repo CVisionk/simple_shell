@@ -11,17 +11,17 @@
 int tokenize_input(char *buffer, char *args[])
 {
 	char *token;
- int arg_count = 0;
+	int arg_count = 0;
 
- token = strtok(buffer, " \t\n");
- while (token != NULL && arg_count < MAX_ARGS - 1)
- {
-  args[arg_count++] = token;
-  token = strtok(NULL, " \t\n");
- }
- args[arg_count] = NULL;
+	token = strtok(buffer, " \t\n");
+	while (token != NULL && arg_count < MAX_ARGS - 1)
+	{
+		args[arg_count++] = token;
+		token = strtok(NULL, " \t\n");
+	}
+	args[arg_count] = NULL;
 
- return arg_count;
+	return (arg_count);
 }
 
 /**
@@ -35,15 +35,15 @@ int tokenize_input(char *buffer, char *args[])
  */
 void execute_command(char *command, char *args[])
 {
- if (execve(command, args, environ) == -1)
- {
-  fprintf(stderr, "%s: %s\n", command, strerror(errno));
-  exit(EXIT_FAILURE);
- }
+	if (execve(command, args, environ) == -1)
+	{
+		fprintf(stderr, "%s: %s\n", command, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
 }
 
 /**
- * search_and_execute - Searches for the executable file in PATH and executes it.
+ * search_and_execute - Searches for the executable in PATH and executes it.
  *
  * @command: The command to be executed.
  * @args: The arguments for the command.
@@ -53,35 +53,38 @@ void execute_command(char *command, char *args[])
  */
 void search_and_execute(char *command, char *args[])
 {
- if (strchr(command, '/'))
- {
-  execute_command(command, args);
-  return;
- }
+	char *path = getenv("PATH");
+	char *dir;
+	char filepath[256];
 
- char *path = getenv("PATH");
- char *dir;
- char filepath[256];
+	if (strchr(command, '/'))
+	{
+		execute_command(command, args);
+		return;
+	}
 
- if (path != NULL)
- {
-  char *path_copy = strdup(path);
-  dir = strtok(path_copy, ":");
-  while (dir != NULL)
-  {
-   snprintf(filepath, sizeof(filepath), "%s/%s", dir, command);
-   if (access(filepath, X_OK) == 0)
-   {
-    execute_command(filepath, args);
-    free(path_copy);
-    return;
-   }
-   dir = strtok(NULL, ":");
-  }
-  free(path_copy);
- }
 
- fprintf(stderr, "%s: command not found\n", command);
+
+	if (path != NULL)
+	{
+		char *path_copy = strdup(path);
+		dir = strtok(path_copy, ":");
+
+		while (dir != NULL)
+		{
+			snprintf(filepath, sizeof(filepath), "%s/%s", dir, command);
+			if (access(filepath, X_OK) == 0)
+			{
+				execute_command(filepath, args);
+				free(path_copy);
+				return;
+			}
+			dir = strtok(NULL, ":");
+		}
+		free(path_copy);
+	}
+
+	fprintf(stderr, "%s: command not found\n", command);
 }
 
 /**
@@ -93,7 +96,7 @@ void search_and_execute(char *command, char *args[])
  */
 int is_builtin_command(char *command)
 {
- return strcmp(command, "cd") == 0;
+	return (strcmp(command, "cd") == 0);
 }
 
 /**
@@ -103,13 +106,13 @@ int is_builtin_command(char *command)
  */
 void handle_builtin_commands(char *args[])
 {
- if (strcmp(args[0], "cd") == 0)
- {
-  if (args[1] == NULL || chdir(args[1]) != 0)
-  {
-   perror("cd");
-  }
- }
+	if (strcmp(args[0], "cd") == 0)
+	{
+		if (args[1] == NULL || chdir(args[1]) != 0)
+		{
+			perror("cd");
+		}
+	}
 }
 
 /**
@@ -122,70 +125,71 @@ void handle_builtin_commands(char *args[])
  */
 int main(void)
 {
- char *buffer;
- size_t bufsize = BUFFER_SIZE;
- char *args[MAX_ARGS];
- ssize_t getline_status;
+	char *buffer;
+	size_t bufsize = BUFFER_SIZE;
+	char *args[MAX_ARGS];
+	ssize_t getline_status;
 
- buffer = malloc(bufsize * sizeof(char));
- if (buffer == NULL)
- {
-  perror("Unable to allocate buffer");
-  exit(EXIT_FAILURE);
- }
+	buffer = malloc(bufsize * sizeof(char));
+	if (buffer == NULL)
+	{
+		perror("Unable to allocate buffer");
+		exit(EXIT_FAILURE);
+	}
 
- while (1)
- {
-  if (isatty(STDIN_FILENO))
-  {
-   printf("$ ");
-  }
-  fflush(stdout);
+	while (1)
+	{
+		if (isatty(STDIN_FILENO))
+		{
+			printf("$ ");
+		}
+		fflush(stdout);
 
-  getline_status = getline(&buffer, &bufsize, stdin);
-  if (getline_status == -1)
-  {
-   if (feof(stdin))
-   {
-    break;
-   }
-   else
-   {
-    perror("getline");
-    continue;
-   }
-  }
+		getline_status = getline(&buffer, &bufsize, stdin);
+		if (getline_status == -1)
+		{
+			if (feof(stdin))
+			{
+				break;
+			}
+			else
+			{
+				perror("getline");
+				continue;
+			}
+		}
 
-  tokenize_input(buffer, args);
-  if (args[0] == NULL)
-  {
-   continue;
-  }
+		tokenize_input(buffer, args);
+		if (args[0] == NULL)
+		{
+			continue;
+		}
 
-  if (is_builtin_command(args[0]))
-  {
-   handle_builtin_commands(args);
-  }
-  else
-  {
-   pid_t pid = fork();
-   if (pid == -1)
-   {
-    perror("fork");
-    exit(EXIT_FAILURE);
-   }
-   else if (pid == 0)
-   {
-    search_and_execute(args[0], args);
-    exit(EXIT_FAILURE);
-   }
-   else
-   {
-    waitpid(pid, NULL, 0);
-   }
-  }
- }
+		if (is_builtin_command(args[0]))
+		{
+			handle_builtin_commands(args);
+		}
+		else
+		{
+			pid_t pid = fork();
+			
+			if (pid == -1)
+			{
+				perror("fork");
+				exit(EXIT_FAILURE);
+			}
+			else if (pid == 0)
+			{
+				search_and_execute(args[0], args);
+				exit(EXIT_FAILURE);
+			}
+			else
+			{
+				waitpid(pid, NULL, 0);
+			}
+		}
+	}
 
- free(buffer);
- return 0;
+	free(buffer);
+	return 0;
 }
