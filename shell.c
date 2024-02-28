@@ -1,131 +1,183 @@
 #include "main.h"
 
-/* Function to tokenize the input command and arguments */
-int tokenize_input(char *buffer, char *args[]) {
+/**
+ * tokenize_input - Tokenizes the input command and arguments.
+ * @buffer: The input buffer containing the command and arguments.
+ * @args: An array to store the tokenized arguments.
+ *
+ * Return: The number of arguments tokenized.
+ */
+int tokenize_input(char *buffer, char *args[])
+{
     char *token;
     int arg_count = 0;
 
     token = strtok(buffer, " ");
-    while (token != NULL && arg_count < MAX_ARGS - 1) {
+    while (token != NULL && arg_count < MAX_ARGS - 1)
+    {
         args[arg_count++] = token;
         token = strtok(NULL, " ");
     }
-    args[arg_count] = NULL; /* Null-terminate the argument list */
+    args[arg_count] = NULL;
 
     return arg_count;
 }
 
-/* Function to execute a command */
-void execute_command(char *command, char *args[]) {
-    if (execve(command, args, environ) == -1) {
+/**
+ * execute_command - Executes a command with arguments using execve.
+ * @command: The command to be executed.
+ * @args: The arguments for the command.
+ *
+ * Return: This function does not return if successful.
+ *         Otherwise, it exits with an error message.
+ */
+void execute_command(char *command, char *args[])
+{
+    if (execve(command, args, environ) == -1)
+    {
         perror("execve");
         exit(1);
     }
 }
 
-/* Function to search for the executable file in PATH */
-void search_and_execute(char *command, char *args[]) {
+/**
+ * search_and_execute - Searches for the executable file in PATH and executes it.
+ * @command: The command to be executed.
+ * @args: The arguments for the command.
+ *
+ * This function searches for the executable file in the PATH environment
+ * variable and executes it if found. Otherwise, it prints an error message.
+ */
+void search_and_execute(char *command, char *args[])
+{
     char *path = getenv("PATH");
     char *dir;
-    char filepath[256]; /* Maximum path length */
+    char filepath[256];
 
-    if (path == NULL) {
-        /* If PATH environment variable is not set, use /bin */
+    if (path == NULL)
+    {
         strcpy(filepath, "/bin/");
         strcat(filepath, command);
         execute_command(filepath, args);
-    } else {
-        /* Tokenize PATH to get individual directories */
+    }
+    else
+    {
         dir = strtok(path, ":");
-        while (dir != NULL) {
-            /* Construct full path to executable */
+        while (dir != NULL)
+        {
             strcpy(filepath, dir);
             strcat(filepath, "/");
             strcat(filepath, command);
-            if (access(filepath, X_OK) == 0) {
-                /* If executable file found, execute it */
+            if (access(filepath, X_OK) == 0)
+            {
                 execute_command(filepath, args);
             }
-            /* Move to the next directory in PATH */
             dir = strtok(NULL, ":");
         }
-        /* If executable not found in any directory in PATH */
         printf("%s: command not found\n", command);
-        /*exit(1);*/
     }
 }
 
-/* Function to handle the child process */
-void handle_child_process(char *args[]) {
-    /* Check if the command includes an absolute path */
-    if (args[0][0] == '/') {
+/**
+ * handle_child_process - Handles the child process by executing the command.
+ * @args: The arguments for the command.
+ *
+ * This function checks if the command includes an absolute path. If it does,
+ * it executes the command. Otherwise, it searches for the command in PATH.
+ */
+void handle_child_process(char *args[])
+{
+    if (args[0][0] == '/')
+    {
         execute_command(args[0], args);
-    } else {
+    }
+    else
+    {
         search_and_execute(args[0], args);
     }
 }
 
-/* Function to fork a child process and wait for it */
-void fork_and_wait(char *args[]) {
-    /* Fork a child process */
+/**
+ * fork_and_wait - Forks a child process and waits for it.
+ * @args: The arguments for the command.
+ *
+ * This function forks a child process. If the fork fails, it exits with an
+ * error message. If successful, the child process executes the command and
+ * the parent process waits for the child to finish.
+ */
+void fork_and_wait(char *args[])
+{
     pid_t pid = fork();
 
-    if (pid == -1) {
-        /* Error handling for fork failure */
+    if (pid == -1)
+    {
         perror("fork");
         exit(1);
-    } else if (pid == 0) {
+    }
+    else if (pid == 0)
+    {
         /* Child process */
         handle_child_process(args);
-    } else {
+    }
+    else
+    {
         /* Parent process */
         int status;
         waitpid(pid, &status, 0);
     }
 }
-int main(void) {
+
+/**
+ * main - Entry point of the program.
+ *
+ * This function repeatedly prompts the user for a command and executes it.
+ * It terminates when the user enters "exit".
+ *
+ * Return: Always returns 0.
+ */
+int main(void)
+{
     char *buffer;
     size_t bufsize = BUFFER_SIZE;
-    char *args[MAX_ARGS]; /* Maximum of 64 arguments */
+    char *args[MAX_ARGS];
     ssize_t getline_status;
 
     buffer = (char *)malloc(bufsize * sizeof(char));
-    if (buffer == NULL) {
+    if (buffer == NULL)
+    {
         perror("Unable to allocate buffer");
         exit(1);
     }
 
-    while (1) {
+    while (1)
+    {
         printf("$ ");
-        fflush(stdout); /* Ensure prompt is printed immediately. */
+        fflush(stdout);
 
         getline_status = getline(&buffer, &bufsize, stdin);
-        
-        /* Check for EOF or read error. */
-        if (getline_status == -1) {
-            if (feof(stdin)) {
-                /* End of input (EOF), break the loop. */
-                printf("\n"); /* Print a newline for a clean exit. */
+
+        if (getline_status == -1)
+        {
+            if (feof(stdin))
+            {
+                printf("\n");
                 break;
-            } else {
-                /* Handle getline error. */
+            }
+            else
+            {
                 perror("getline");
                 continue;
             }
         }
 
-        /* Remove newline character. */
         buffer[strcspn(buffer, "\n")] = '\0';
 
-        /* Check if user entered "exit". */
-        if (strcmp(buffer, "exit") == 0) {
+        if (strcmp(buffer, "exit") == 0)
+        {
             break;
         }
 
-        /* Tokenize the input command and arguments. */
         tokenize_input(buffer, args);
-
-        /* Fork a child process and wait for it. */
         fork_and_wait(args);
     }
 
