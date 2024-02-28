@@ -89,35 +89,43 @@ void execute_command(char **args)
  *
  * Returns: int
  */
-
-int main(void)
+int main(int ac, char **av)
 {
-	size_t len = 0;
-	ssize_t read;
-	char *line = NULL;
-	char **args;
-
-	printf("#cisfun$ ");
-	while ((read = getline(&line, &len, stdin)) != -1)
+	if (ac == 2)
 	{
-		if (read == -1 && len == 0)
-		{
-			fprintf(stderr, "Memory allocation failed\n");
-			exit(EXIT_FAILURE);
-		}
-		line[strcspn(line, "\n")] = 0;
-
-		args = splitter(line);
-
-		if (args[1] == NULL)
-		{
-			execute_command(args);
-		}
-		else
-			fprintf(stderr, "./shell: No such file or directory\n");
+		printf("%s", *av);
+	}
+	else
+	{
+		size_t len = 0;
+		ssize_t read;
+		char *line = NULL;
+		char **args;
 
 		printf("#cisfun$ ");
-		free_args(args);
+		while ((read = getline(&line, &len, stdin)) != -1)
+		{
+			if (read == -1 && len == 0)
+			{
+				fprintf(stderr, "Memory allocation failed\n");
+				exit(EXIT_FAILURE);
+			}
+			line[strcspn(line, "\n")] = 0;
+
+			args = splitter(line);
+
+			if (args[1] == NULL)
+			{
+				execute_command(args);
+			}
+			else
+			{
+				fprintf(stderr, "./shell: No such file or directory\n");
+			}
+
+			printf("#cisfun$ ");
+			free_args(args);
+		}
 	}
 	return (0);
 }
