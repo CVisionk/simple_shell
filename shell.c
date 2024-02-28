@@ -128,7 +128,7 @@ int main(int ac, char **av)
 			}
 			else
 			{
-				fprintf(stderr, "./shell: No such file or directory\n");
+				execute_command(args);
 			}
 
 			printf("$ ");
