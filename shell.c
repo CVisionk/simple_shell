@@ -2,22 +2,16 @@
 
 
 /**
- * tokenize_input - Tokenizes the input command and arguments.
- * @buffer: The input buffer containing the command and arguments.
- * @args: An array to store the tokenized arguments.
- *
- * Return: The number of arguments tokenized.
+ * Tokenizes the input command and arguments.
  */
-int tokenize_input(char *buffer, char *args[])
-{
+int tokenize_input(char *buffer, char *args[]) {
     char *token;
     int arg_count = 0;
 
-    token = strtok(buffer, " ");
-    while (token != NULL && arg_count < MAX_ARGS - 1)
-    {
+    token = strtok(buffer, " \t\n");
+    while (token != NULL && arg_count < MAX_ARGS - 1) {
         args[arg_count++] = token;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, " \t\n");
     }
     args[arg_count] = NULL;
 
@@ -25,168 +19,116 @@ int tokenize_input(char *buffer, char *args[])
 }
 
 /**
- * execute_command - Executes a command with arguments using execve.
- * @command: The command to be executed.
- * @args: The arguments for the command.
- *
- * Return: This function does not return if successful.
- *         Otherwise, it exits with an error message.
+ * Executes a command with arguments using execve.
  */
-void execute_command(char *command, char *args[])
-{
-    if (execve(command, args, environ) == -1)
-    {
-        perror("execve");
-        exit(1);
+void execute_command(char *command, char *args[]) {
+    if (execve(command, args, environ) == -1) {
+        fprintf(stderr, "%s: %s\n", command, strerror(errno));
+        exit(EXIT_FAILURE);
     }
 }
 
 /**
- * search_and_execute - Searches for the executable file in PATH and executes it.
- * @command: The command to be executed.
- * @args: The arguments for the command.
- *
- * This function searches for the executable file in the PATH environment
- * variable and executes it if found. Otherwise, it prints an error message.
+ * Searches for the executable file in PATH and executes it.
  */
-void search_and_execute(char *command, char *args[])
-{
+void search_and_execute(char *command, char *args[]) {
+    if (strchr(command, '/')) {
+        execute_command(command, args);
+        return;
+    }
+
     char *path = getenv("PATH");
     char *dir;
     char filepath[256];
 
-    if (path == NULL)
-    {
-        strcpy(filepath, "/bin/");
-        strcat(filepath, command);
-        execute_command(filepath, args);
-    }
-    else
-    {
-        dir = strtok(path, ":");
-        while (dir != NULL)
-        {
-            strcpy(filepath, dir);
-            strcat(filepath, "/");
-            strcat(filepath, command);
-            if (access(filepath, X_OK) == 0)
-            {
+    if (path != NULL) {
+        char *path_copy = strdup(path);
+        dir = strtok(path_copy, ":");
+        while (dir != NULL) {
+            snprintf(filepath, sizeof(filepath), "%s/%s", dir, command);
+            if (access(filepath, X_OK) == 0) {
                 execute_command(filepath, args);
+                free(path_copy);
+                return;
             }
             dir = strtok(NULL, ":");
         }
-        printf("%s: command not found\n", command);
+        free(path_copy);
+    }
+
+    fprintf(stderr, "%s: command not found\n", command);
+}
+
+/**
+ * Checks if the command is a built-in command.
+ */
+int is_builtin_command(char *command) {
+    return strcmp(command, "cd") == 0;
+}
+
+/**
+ * Handles built-in commands.
+ */
+void handle_builtin_commands(char *args[]) {
+    if (strcmp(args[0], "cd") == 0) {
+        if (args[1] == NULL || chdir(args[1]) != 0) {
+            perror("cd");
+        }
     }
 }
 
 /**
- * handle_child_process - Handles the child process by executing the command.
- * @args: The arguments for the command.
- *
- * This function checks if the command includes an absolute path. If it does,
- * it executes the command. Otherwise, it searches for the command in PATH.
+ * Main shell loop.
  */
-void handle_child_process(char *args[])
-{
-    if (args[0][0] == '/')
-    {
-        execute_command(args[0], args);
-    }
-    else
-    {
-        search_and_execute(args[0], args);
-    }
-}
-
-/**
- * fork_and_wait - Forks a child process and waits for it.
- * @args: The arguments for the command.
- *
- * This function forks a child process. If the fork fails, it exits with an
- * error message. If successful, the child process executes the command and
- * the parent process waits for the child to finish.
- */
-void fork_and_wait(char *args[])
-{
-    pid_t pid = fork();
-
-    if (pid == -1)
-    {
-        perror("fork");
-        exit(1);
-    }
-    else if (pid == 0)
-    {
-        /* Child process */
-        handle_child_process(args);
-    }
-    else
-    {
-        /* Parent process */
-        int status;
-        waitpid(pid, &status, 0);
-    }
-}
-
-/**
- * main - Entry point of the program.
- *
- * This function repeatedly prompts the user for a command and executes it.
- * It terminates when the user enters "exit".
- *
- * Return: Always returns 0.
- */
-int main(void)
-{
+int main(void) {
     char *buffer;
     size_t bufsize = BUFFER_SIZE;
     char *args[MAX_ARGS];
     ssize_t getline_status;
 
-    buffer = (char *)malloc(bufsize * sizeof(char));
-    if (buffer == NULL)
-    {
+    buffer = malloc(bufsize * sizeof(char));
+    if (buffer == NULL) {
         perror("Unable to allocate buffer");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
-    while (1)
-    {			
-								int marker = -1;
-								if(isatty(STDIN_FILENO)){
-        	printf("$ ");
-									marker = 1;
-								}
+    while (1) {
+     	if(isatty(STDIN_FILENO))
+      {
+        printf("$ ");
+      }
         fflush(stdout);
 
         getline_status = getline(&buffer, &bufsize, stdin);
-        if (getline_status == -1)
-        {
-            if (feof(stdin))
-            {
-                if(marker>-1)
-																{
-																	printf("\n");
-																}
-																
+        if (getline_status == -1) {
+            if (feof(stdin)) {
+                //printf("\n");
                 break;
-            }
-            else
-            {
+            } else {
                 perror("getline");
                 continue;
             }
         }
 
-        buffer[strcspn(buffer, "\n")] = '\0';
-
-        if (strcmp(buffer, "exit") == 0)
-        {
-            break;
-        }
-
         tokenize_input(buffer, args);
-        fork_and_wait(args);
+        if (args[0] == NULL) continue; // Skip empty commands
+
+        if (is_builtin_command(args[0])) {
+            handle_builtin_commands(args);
+        } else {
+            pid_t pid = fork();
+            if (pid == -1) {
+                perror("fork");
+                exit(EXIT_FAILURE);
+            } else if (pid == 0) {
+                // Child process
+                search_and_execute(args[0], args);
+                exit(EXIT_FAILURE); // Exit if execve fails
+            } else {
+                // Parent process
+                waitpid(pid, NULL, 0);
+            }
+        }
     }
 
     free(buffer);
