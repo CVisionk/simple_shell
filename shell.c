@@ -151,7 +151,7 @@ int main(void)
 
     while (1)
     {
-        printf("#$ ");
+        printf("$ ");
         fflush(stdout);
 
         getline_status = getline(&buffer, &bufsize, stdin);
