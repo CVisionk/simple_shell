@@ -150,12 +150,14 @@ int main(void)
     }
 
     while (1)
-    {
+    {			
+							/*int marker = -1;*/
+								if(isatty(STDIN_FILENO)){
         printf("$ ");
+								}
         fflush(stdout);
 
         getline_status = getline(&buffer, &bufsize, stdin);
-
         if (getline_status == -1)
         {
             if (feof(stdin))
