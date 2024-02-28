@@ -9,33 +9,47 @@
  *
  * Return: array of strings
  */
+/**
+ * splitter - split input into array of strings.
+ * @input: input to split
+ *
+ * Return: array of strings
+ */
 char **splitter(char *input)
 {
-	char *token;
-	int arg_index;
-	char **args = malloc(MAX_ARGS * sizeof(char *));
+    char *token;
+    int arg_index;
+    char **args = malloc(MAX_ARGS * sizeof(char *));
 
-	if (args == NULL)
-	{
-		fprintf(stderr, "Memory allocation failed\n");
-		exit(EXIT_FAILURE);
-	}
+    if (args == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
 
-	token = strtok(input, " ");
-	arg_index = 0;
-	while (token != NULL && arg_index < MAX_ARGS - 1)
-	{
-		args[arg_index] = strdup(token);
-		if (args[arg_index] == NULL)
-		{
-			fprintf(stderr, "Memory allocation failed\n");
-			exit(EXIT_FAILURE);
-		}
-		arg_index++;
-		token = strtok(NULL, " ");
-	}
-	args[arg_index] = NULL;
-	return (args);
+    token = strtok(input, " ");
+    arg_index = 0;
+    while (token != NULL && arg_index < MAX_ARGS - 1)
+    {
+        if (strcmp(token, "ls") == 0)
+        {
+            args[arg_index] = strdup("/bin/ls");
+        }
+        else
+        {
+            args[arg_index] = strdup(token);
+        }
+
+        if (args[arg_index] == NULL)
+        {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
+        arg_index++;
+        token = strtok(NULL, " ");
+    }
+    args[arg_index] = NULL;
+    return (args);
 }
 
 
