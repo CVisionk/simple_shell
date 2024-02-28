@@ -25,7 +25,13 @@ char **splitter(char *input)
 	arg_index = 0;
 	while (token != NULL && arg_index < MAX_ARGS - 1)
 	{
-		args[arg_index++] = strdup(token);
+		args[arg_index] = strdup(token);
+		if (args[arg_index] == NULL)
+		{
+			fprintf(stderr, "Memory allocation failed\n");
+			exit(EXIT_FAILURE);
+		}
+		arg_index++;
 		token = strtok(NULL, " ");
 	}
 	args[arg_index] = NULL;
@@ -71,7 +77,7 @@ void execute_command(char **args)
 		/* Child process */
 		if (execve(args[0], args, NULL) == -1)
 		{
-			fprintf(stderr, "./shell: No such file or directory\n");
+			fprintf(stderr, "./shell: %s: No such file or directory\n", args[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -85,12 +91,11 @@ void execute_command(char **args)
 
 
 /**
- * main - no description
+ * main - Entry point of the program
+ * @ac: The number of command-line arguments
+ * @av: An array of pointers to the arguments
  *
-	* @ac: number of arguments
- * @av: arguments
-	*
- * Return: int
+ * Return: Always returns 0
  */
 int main(int ac, char **av)
 {
@@ -129,6 +134,7 @@ int main(int ac, char **av)
 			printf("#cisfun$ ");
 			free_args(args);
 		}
+		free(line);
 	}
 	return (0);
 }
