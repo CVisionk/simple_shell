@@ -17,7 +17,7 @@ int tokenize_input(char *buffer, char *args[]) {
 
 /* Function to execute a command */
 void execute_command(char *command, char *args[]) {
-    if (execve(command, args, NULL) == -1) {
+    if (execve(command, args, environ) == -1) {
         perror("execve");
         exit(1);
     }
@@ -51,7 +51,7 @@ void search_and_execute(char *command, char *args[]) {
         }
         /* If executable not found in any directory in PATH */
         printf("%s: command not found\n", command);
-        exit(1);
+        /*exit(1);*/
     }
 }
 
@@ -83,12 +83,11 @@ void fork_and_wait(char *args[]) {
         waitpid(pid, &status, 0);
     }
 }
-
-int main(void)
-{
+int main(void) {
     char *buffer;
     size_t bufsize = BUFFER_SIZE;
-				char *args[MAX_ARGS]; /* Maximum of 64 arguments */
+    char *args[MAX_ARGS]; /* Maximum of 64 arguments */
+    ssize_t getline_status;
 
     buffer = (char *)malloc(bufsize * sizeof(char));
     if (buffer == NULL) {
@@ -97,21 +96,36 @@ int main(void)
     }
 
     while (1) {
-        printf("#cisfun$ ");
-        getline(&buffer, &bufsize, stdin);
-        /* Remove newline character */
-        buffer[strcspn(buffer, "\n")] = '\0';
+        printf("$ ");
+        fflush(stdout); /* Ensure prompt is printed immediately. */
+
+        getline_status = getline(&buffer, &bufsize, stdin);
         
-        /* Check if user entered "exit" */
+        /* Check for EOF or read error. */
+        if (getline_status == -1) {
+            if (feof(stdin)) {
+                /* End of input (EOF), break the loop. */
+                printf("\n"); /* Print a newline for a clean exit. */
+                break;
+            } else {
+                /* Handle getline error. */
+                perror("getline");
+                continue;
+            }
+        }
+
+        /* Remove newline character. */
+        buffer[strcspn(buffer, "\n")] = '\0';
+
+        /* Check if user entered "exit". */
         if (strcmp(buffer, "exit") == 0) {
             break;
         }
 
-        /* Tokenize the input command and arguments */
-        
+        /* Tokenize the input command and arguments. */
         tokenize_input(buffer, args);
 
-        /* Fork a child process and wait for it */
+        /* Fork a child process and wait for it. */
         fork_and_wait(args);
     }
 

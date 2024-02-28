@@ -12,5 +12,6 @@
 
 #define BUFFER_SIZE 1024
 #define MAX_ARGS 64
+extern char **environ;
 
 #endif
