@@ -1,154 +1,120 @@
 #include "main.h"
 
-#define MAX_INPUT_LENGTH 1024
-#define MAX_ARGS 64
-
-/**
- * splitter - split input into array of strings.
- * @input: input to split
- *
- * Return: array of strings
- */
-/**
- * splitter - split input into array of strings.
- * @input: input to split
- *
- * Return: array of strings
- */
-char **splitter(char *input)
-{
+/* Function to tokenize the input command and arguments */
+int tokenize_input(char *buffer, char *args[]) {
     char *token;
-    int arg_index;
-    char **args = malloc(MAX_ARGS * sizeof(char *));
+    int arg_count = 0;
 
-    if (args == NULL)
-    {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
-
-    token = strtok(input, " ");
-    arg_index = 0;
-    while (token != NULL && arg_index < MAX_ARGS - 1)
-    {
-        if (strcmp(token, "ls") == 0)
-        {
-            args[arg_index] = strdup("/bin/ls");
-        }
-        else
-        {
-            args[arg_index] = strdup(token);
-        }
-
-        if (args[arg_index] == NULL)
-        {
-            fprintf(stderr, "Memory allocation failed\n");
-            exit(EXIT_FAILURE);
-        }
-        arg_index++;
+    token = strtok(buffer, " ");
+    while (token != NULL && arg_count < MAX_ARGS - 1) {
+        args[arg_count++] = token;
         token = strtok(NULL, " ");
     }
-    args[arg_index] = NULL;
-    return (args);
+    args[arg_count] = NULL; /* Null-terminate the argument list */
+
+    return arg_count;
 }
 
-
-/**
- * free_args - free memory
- * @args: memory to free
- *
- * Returns: void
- */
-void free_args(char **args)
-{
-	int i;
-
-	for (i = 0; args[i] != NULL; i++)
-	{
-		free(args[i]);
-	}
-	free(args);
+/* Function to execute a command */
+void execute_command(char *command, char *args[]) {
+    if (execve(command, args, NULL) == -1) {
+        perror("execve");
+        exit(1);
+    }
 }
 
+/* Function to search for the executable file in PATH */
+void search_and_execute(char *command, char *args[]) {
+    char *path = getenv("PATH");
+    char *dir;
+    char filepath[256]; /* Maximum path length */
 
-/**
- * execute_command - execute args
- * @args: arguments to execute
- *
- * Returns: void
- */
-void execute_command(char **args)
-{
-	pid_t pid = fork();
-
-	if (pid < 0)
-	{
-		fprintf(stderr, "Fork failed\n");
-		exit(EXIT_FAILURE);
-	}
-	else if (pid == 0)
-	{
-		/* Child process */
-		if (execve(args[0], args, NULL) == -1)
-		{
-			fprintf(stderr, "./shell: %s: No such file or directory\n", args[0]);
-			exit(EXIT_FAILURE);
-		}
-	}
-	else
-	{
-		/* Parent process */
-		wait(NULL); /* Wait for child to finish */
-	}
+    if (path == NULL) {
+        /* If PATH environment variable is not set, use /bin */
+        strcpy(filepath, "/bin/");
+        strcat(filepath, command);
+        execute_command(filepath, args);
+    } else {
+        /* Tokenize PATH to get individual directories */
+        dir = strtok(path, ":");
+        while (dir != NULL) {
+            /* Construct full path to executable */
+            strcpy(filepath, dir);
+            strcat(filepath, "/");
+            strcat(filepath, command);
+            if (access(filepath, X_OK) == 0) {
+                /* If executable file found, execute it */
+                execute_command(filepath, args);
+            }
+            /* Move to the next directory in PATH */
+            dir = strtok(NULL, ":");
+        }
+        /* If executable not found in any directory in PATH */
+        printf("%s: command not found\n", command);
+        exit(1);
+    }
 }
 
+/* Function to handle the child process */
+void handle_child_process(char *args[]) {
+    /* Check if the command includes an absolute path */
+    if (args[0][0] == '/') {
+        execute_command(args[0], args);
+    } else {
+        search_and_execute(args[0], args);
+    }
+}
 
+/* Function to fork a child process and wait for it */
+void fork_and_wait(char *args[]) {
+    /* Fork a child process */
+    pid_t pid = fork();
 
-/**
- * main - Entry point of the program
- * @ac: The number of command-line arguments
- * @av: An array of pointers to the arguments
- *
- * Return: Always returns 0
- */
-int main(int ac, char **av)
+    if (pid == -1) {
+        /* Error handling for fork failure */
+        perror("fork");
+        exit(1);
+    } else if (pid == 0) {
+        /* Child process */
+        handle_child_process(args);
+    } else {
+        /* Parent process */
+        int status;
+        waitpid(pid, &status, 0);
+    }
+}
+
+int main(void)
 {
-	if (ac == 2)
-	{
-		printf("%s", *av);
-	}
-	else
-	{
-		size_t len = 0;
-		ssize_t read;
-		char *line = NULL;
-		char **args;
+    char *buffer;
+    size_t bufsize = BUFFER_SIZE;
+				char *args[MAX_ARGS]; /* Maximum of 64 arguments */
 
-		printf("$ ");
-		while ((read = getline(&line, &len, stdin)) != -1)
-		{
-			if (read == -1 && len == 0)
-			{
-				fprintf(stderr, "Memory allocation failed\n");
-				exit(EXIT_FAILURE);
-			}
-			line[strcspn(line, "\n")] = 0;
+    buffer = (char *)malloc(bufsize * sizeof(char));
+    if (buffer == NULL) {
+        perror("Unable to allocate buffer");
+        exit(1);
+    }
 
-			args = splitter(line);
+    while (1) {
+        printf("#cisfun$ ");
+        getline(&buffer, &bufsize, stdin);
+        /* Remove newline character */
+        buffer[strcspn(buffer, "\n")] = '\0';
+        
+        /* Check if user entered "exit" */
+        if (strcmp(buffer, "exit") == 0) {
+            break;
+        }
 
-			if (args[1] == NULL)
-			{
-				execute_command(args);
-			}
-			else
-			{
-				execute_command(args);
-			}
+        /* Tokenize the input command and arguments */
+        
+        tokenize_input(buffer, args);
 
-			printf("$ ");
-			free_args(args);
-		}
-		free(line);
-	}
-	return (0);
+        /* Fork a child process and wait for it */
+        fork_and_wait(args);
+    }
+
+    free(buffer);
+    return 0;
 }

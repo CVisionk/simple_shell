@@ -8,5 +8,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <errno.h>
+
+#define BUFFER_SIZE 1024
+#define MAX_ARGS 64
 
 #endif

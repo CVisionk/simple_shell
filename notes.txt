@@ -1,4 +1,0 @@
-cat  /proc/sys/kernel/pid_max
-in Linux systems determines the maximum value that can be assigned to a process ID (PID).
-------------------------------------------------------------------
-
