@@ -18,5 +18,11 @@ void execute_command(char *command, char *args[]);
 void search_and_execute(char *command, char *args[]);
 void handle_builtin_commands(char *args[]);
 int is_builtin_command(char *command);
+int tokenize_input(char *buffer, char *args[]);
+void execute_command(char *command, char *args[]);
+void search_and_execute(char *command, char *args[]);
+void print_prompt(void);
+void execute_commands(char *buffer);
+ssize_t read_input(char **buffer, size_t *bufsize);
 
 #endif
